@@ -1,18 +1,3 @@
-"""
-Volatility Modeling & Risk Forecasting
-- Fit GARCH(1,1) on each asset, produce one-step-ahead rolling volatility forecasts
-- Compute VaR and ES (normal or Student-t) from model forecasts
-- Compare realized vs predicted volatility and save plots/reports
-
-Outputs per asset (under ./reports/):
-- {TICKER}_vol_forecast.csv
-- {TICKER}_vol_forecast.png
-- {TICKER}_VaR_ES.csv
-- volatility_risk_report_{TICKER}.md
-
-Usage: python "Volatility Modeling & Risk Forecasting.py" --files-glob "*_data.csv"
-"""
-
 import os
 import glob
 import argparse
