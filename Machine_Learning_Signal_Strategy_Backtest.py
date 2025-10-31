@@ -1,15 +1,3 @@
-"""
-Machine Learning Signal Strategy Backtest
-
-- Train Logistic Regression and Random Forest signals (same features as existing scripts)
-- Convert predictions to trading signals (long when predict up, flat otherwise)
-- Backtest strategy returns vs buy-and-hold on the test period
-- Compute annualized return, annualized volatility, Sharpe, max drawdown
-- Produce comparison CSV and cumulative return plots under `reports/`
-
-Usage: python "Machine Learning Signal Strategy Backtest.py"
-"""
-
 import os, glob, argparse
 import pandas as pd
 import numpy as np
