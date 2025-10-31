@@ -1,15 +1,3 @@
-# Multi-Asset Portfolio Optimization
-- Mean-Variance efficient frontier (scipy)
-- Approximate Max-Sharpe via risk-aversion sweep (quadratic program)
-- CVaR minimization frontier (cvxpy) if cvxpy is installed
-- Weight sensitivity analysis across risk tolerance (lambda sweep)
-
-# Outputs:
-- efficient_frontier_meanvar.png
-- efficient_frontier_cvar.png (if cvxpy available)
-- weight_paths.png
-- portfolio_opt_report.txt
-
 import os
 import glob
 import argparse
