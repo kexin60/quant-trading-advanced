@@ -9,4 +9,5 @@ This module fits a GARCH(1,1) model to each asset’s return series and produces
 This module trains Logistic Regression and Random Forest models to predict next-day price direction using technical and factor features. Predicted signals are converted into trading positions and evaluated against a buy and hold benchmark through backtesting. The script generates cumulative return plots, detailed performance metrics, and Markdown summary reports for transparent model comparison.  
 
 -[Quant_Trading_Engine.py](Quant_Trading_Engine.py) 
-It is a modular quantitative trading framework that integrates volatility forecasting, portfolio optimization, and automated execution through the Interactive Brokers API.
+This module serves as the core engine of the framework, integrating all functional components — volatility forecasting, signal generation, portfolio optimization, and trade execution.  
+It orchestrates real-time data flow, manages model updates, and automates trading via the Interactive Brokers API. Comprehensive trade logs, performance summaries, and diagnostic plots are generated for end-to-end transparency and reproducibility.
