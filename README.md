@@ -12,8 +12,8 @@ This module trains Logistic Regression and Random Forest models to predict next-
 This module serves as the core engine of the framework, integrating all functional components — volatility forecasting, signal generation, portfolio optimization, and trade execution.  
 It orchestrates real-time data flow, manages model updates, and automates trading via the Interactive Brokers API. Comprehensive trade logs, performance summaries, and diagnostic plots are generated for end-to-end transparency and reproducibility.
 
-#Environment Setup
-python3 -m venv .venv
-source .venv/bin/activate # macOS / Linux
-.venv\Scripts\activate # Windows
-pip install -r requirements.txt
+#Environment Setup  
+python3 -m venv .venv  
+source .venv/bin/activate # macOS / Linux  
+.venv\Scripts\activate # Windows  
+pip install -r requirements.txt  
