@@ -1,33 +1,3 @@
-"""
-Implied Volatility Surface Modeling
-
-This script provides comprehensive implied volatility surface modeling capabilities:
-- Option chain data retrieval using yfinance and IBKR API
-- IV surface construction with strike × maturity dimensions
-- Cubic spline and SABR model fitting for volatility smile interpolation
-- Time-series analysis of volatility smile structure evolution
-- Advanced risk modeling and financial mathematics applications
-
-Key Features:
-- Multi-source option data collection (yfinance, IBKR)
-- Black-Scholes implied volatility calculation
-- SABR model calibration for volatility smile modeling
-- 3D volatility surface visualization
-- Term structure and skew analysis
-- Historical volatility smile tracking
-
-Outputs:
-- IV surface plots (3D and heatmaps)
-- SABR calibration results
-- Volatility term structure analysis
-- Skew evolution tracking
-- Risk metrics and Greeks surface
-
-Usage:
-python "Implied Volatility Surface Modeling.py" --symbol SPY --source yfinance
-python "Implied Volatility Surface Modeling.py" --symbol AAPL --source ibkr --live
-"""
-
 import os
 import argparse
 import warnings
