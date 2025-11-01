@@ -1,29 +1,3 @@
-"""
-Event-Driven Trading Strategy with News Sentiment Analysis
-
-This script implements a sophisticated event-driven trading strategy that combines:
-- Real-time news sentiment analysis using FinBERT
-- Technical indicators and market data
-- Event-responsive trading signals
-- Performance comparison with and without sentiment factors
-
-Key Features:
-- FinBERT-based financial news sentiment analysis
-- Multi-source news aggregation (Financial APIs)
-- Real-time signal generation and portfolio management
-- Event detection and reaction mechanisms
-- Comprehensive backtesting with sentiment vs. no-sentiment comparison
-- Risk management and position sizing
-- Performance analytics and visualization
-
-Dependencies:
-pip install transformers torch yfinance newsapi-python alpha-vantage finnhub-python
-pip install pandas numpy matplotlib seaborn scikit-learn ta-lib plotly dash
-
-Author: Advanced Quantitative Trading System
-Date: 2025-01-01
-"""
-
 import os
 import warnings
 import json
