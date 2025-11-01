@@ -2,11 +2,8 @@
 # Author: Kexin
 # Python Version: 3.11
 # Platform: macOS
-# Description:
-#   This file lists all Python dependencies required
-#   for Kexin’s quantitative finance & data visualization projects.
-#   Generated via `pip freeze > requirements.txt`
-#   Date: 2025-10-31
+# Generated via `pip freeze > requirements.txt`
+# Date: 2025-10-31
 
 # Core data analysis and numerical computing
 numpy>=1.20.0
