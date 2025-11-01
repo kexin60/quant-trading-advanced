@@ -14,6 +14,12 @@ This module serves as the core engine of the framework, integrating all function
 -[Factor_Based_Return_Prediction_Model.py](Factor_Based_Return_Prediction_Model.py)  
 Builds a multi-factor regression model to predict next-day excess returns using Fama-French factors, momentum, volatility, beta, and sentiment features. Supports linear and tree based models (OLS, Lasso, Ridge, Random Forest, XGBoost, LightGBM). Generates performance metrics, exposure plots, and Markdown summary reports for transparent evaluation.
 
+-[Implied_Volatility_Surface_Modeling.py](Implied_Volatility_Surface_Modeling.py)    
+This module constructs and analyzes the implied volatility surface from option market data. It retrieves option chains via yfinance or IBKR API, computes implied volatilities using the Black-Scholes model, and fits SABR curves to capture volatility smiles. The script produces 3D surface plots, volatility term structures, and skew evolution metrics, supporting option risk modeling and visualization.  
+
+-[Event_Driven_Trading_Strategy_with_News_Sentiment.py](Event_Driven_Trading_Strategy_with_News_Sentiment.py)    
+This module implements an event driven trading framework that fuses real-time news sentiment (FinBERT) with technical and momentum signals. It aggregates news from multiple APIs, computes sentiment scores, and dynamically generates trading decisions with integrated risk control and backtesting. The script compares sentiment aware versus technical only strategies, producing performance metrics, trade logs, and interactive visualizations.  
+
 #Environment Setup  
 python3 -m venv .venv  
 source .venv/bin/activate # macOS / Linux  
