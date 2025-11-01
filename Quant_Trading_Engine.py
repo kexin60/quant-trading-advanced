@@ -1,8 +1,3 @@
-# Trading+ System Integrated Script
-# This script combines volatility forecasting, portfolio optimization, machine learning signals,
-# and automated trading via the IBKR API (paper trading). Each section is modular with error handling and logging.
-# Inline comments explain each part of the process for clarity.
-
 import os
 import math
 import time
