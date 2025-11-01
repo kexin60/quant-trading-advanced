@@ -1,23 +1,3 @@
-"""
-Factor-Based Return Prediction Model
-
-Builds a multi-factor model to predict excess returns using:
-- Fama-French factors (if available)
-- Momentum
-- Volatility
-- Sentiment (optional: CSV with Date, Sentiment or price-based proxy)
-
-Supports linear models (OLS, Lasso, Ridge) and tree/boosted models (RandomForest, XGBoost, LightGBM).
-Outputs:
-- factor_exposures.png  (coefficients or feature importances)
-- predicted_returns_distribution.png
-- predictions CSV and a markdown report in `reports/`
-
-Usage examples:
-  python "Factor-Based Return Prediction Model.py" --symbols AAPL QQQ --model ridge
-
-"""
-
 import os
 import glob
 import argparse
