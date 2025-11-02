@@ -3,7 +3,7 @@
 # Python Version: 3.11
 # Platform: macOS
 # Generated via `pip freeze > requirements.txt`
-# Date: 2025-10-31
+# Date: 2025-11-2
 
 arch==7.2.0
 certifi==2025.10.5
@@ -33,6 +33,9 @@ scipy==1.16.2
 seaborn==0.13.2
 six==1.17.0
 statsmodels==0.14.5
+threadpoolctl==3.6.0
+tzdata==2025.2
+urllib3==2.5.0
 threadpoolctl==3.6.0
 tzdata==2025.2
 urllib3==2.5.0
