@@ -20,6 +20,9 @@ This module constructs and analyzes the implied volatility surface from option m
 -[Event_Driven_Trading_Strategy_with_News_Sentiment.py](Event_Driven_Trading_Strategy_with_News_Sentiment.py)    
 This module implements an event driven trading framework that fuses real-time news sentiment (FinBERT) with technical and momentum signals. It aggregates news from multiple APIs, computes sentiment scores, and dynamically generates trading decisions with integrated risk control and backtesting. The script compares sentiment aware versus technical only strategies, producing performance metrics, trade logs, and interactive visualizations.  
 
+-[Quant_Trading_Engine_Plus.py](Quant_Trading_Engine_Plus.py)    
+This module serves as the enhanced and unified core of the entire quantitative trading framework, integrating all functional components data ingestion, signal generation, risk management, portfolio optimization, and automated execution via the Interactive Brokers (IBKR) API into one cohesive pipeline. It orchestrates real-time data flow, merges multi-source signals from machine learning, factor models, and news sentiment analysis, and dynamically generates portfolio allocations under risk and turnover constraints. The engine supports both paper trading and live execution, automatically generating daily trade reports, performance summaries, and risk analytics for transparent evaluation.  
+
 #Environment Setup  
 python3 -m venv .venv  
 source .venv/bin/activate # macOS / Linux  
