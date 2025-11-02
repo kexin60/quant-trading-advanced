@@ -1,18 +1,3 @@
-# Quant Trading Engine Plus - Enhanced Modular Trading System
-# 
-# This enhanced trading engine provides a modular, extensible framework for quantitative trading
-# with advanced risk management, multiple signal sources, and robust execution capabilities.
-# Designed for seamless integration with Interactive Brokers (IBKR) API.
-#
-# Key Features:
-# - Modular architecture with pluggable components
-# - Multiple data sources and real-time feeds
-# - Advanced signal fusion and ML models
-# - Comprehensive risk management and portfolio optimization
-# - Robust execution engine with transaction cost analysis
-# - Configuration-driven parameter management
-# - Real-time monitoring and reporting
-
 import os
 import sys
 import json
