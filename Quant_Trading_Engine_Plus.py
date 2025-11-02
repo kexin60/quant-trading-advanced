@@ -73,9 +73,7 @@ try:
 except ImportError:
     PLOTLY_AVAILABLE = False
 
-# ============================================================================
 # Configuration Management
-# ============================================================================
 
 @dataclass
 class TradingConfig:
@@ -199,9 +197,7 @@ class TradingConfig:
         with open(config_path, 'w') as f:
             json.dump(asdict(self), f, indent=2)
 
-# ============================================================================
 # Performance and Risk Metrics
-# ============================================================================
 
 class PerformanceMetrics:
     """Calculate comprehensive performance and risk metrics"""
@@ -282,9 +278,7 @@ class PerformanceMetrics:
         
         return var, cvar
 
-# ============================================================================
 # Data Handler Module
-# ============================================================================
 
 class DataHandler:
     """Enhanced data acquisition and management system"""
@@ -578,9 +572,7 @@ class DataHandler:
         
         return real_time_prices
 
-# ============================================================================
 # Signal Generation Module
-# ============================================================================
 
 class SignalGenerator:
     """Advanced signal generation with multiple strategies and fusion"""
@@ -1101,9 +1093,7 @@ class SignalGenerator:
         
         return analysis
 
-# ============================================================================
 # Risk Management Module
-# ============================================================================
 
 class RiskManager:
     """Advanced risk management with VaR, position sizing, and regime detection"""
@@ -1677,9 +1667,7 @@ class MarketRegimeDetector:
         
         return regime
 
-# ============================================================================
 # Portfolio Optimization Module
-# ============================================================================
 
 class PortfolioOptimizer:
     """Advanced portfolio optimization with multiple objectives"""
@@ -2003,9 +1991,7 @@ class PortfolioOptimizer:
             'sharpe_ratios': frontier_sharpe
         }
 
-# ============================================================================
 # Execution Handler Module
-# ============================================================================
 
 class ExecutionHandler:
     """Advanced execution engine with IBKR integration and transaction cost analysis"""
@@ -2448,9 +2434,7 @@ class ExecutionHandler:
             except Exception as e:
                 self.logger.error(f"Error disconnecting from IBKR: {e}")
 
-# ============================================================================
 # Reporting and Visualization Module
-# ============================================================================
 
 class ReportGenerator:
     """Comprehensive reporting and visualization system"""
