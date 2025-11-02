@@ -4391,7 +4391,7 @@ def main():
         config.symbols = args.symbols
     
     print("="*60)
-    print("🚀 Quant Trading Engine Plus")
+    print("Quant Trading Engine Plus")
     print("="*60)
     print(f"Mode: {args.mode.upper()}")
     print(f"Symbols: {config.symbols}")
@@ -4435,7 +4435,7 @@ def main():
         print(" 所有报告已生成")
         print(" 交易数据已保存")
         print("="*50)
-        print("谢谢使用！期待下次交易 ✨")
+        print("谢谢使用！期待下次交易 ")
         print("="*50)
 
 if __name__ == "__main__":
