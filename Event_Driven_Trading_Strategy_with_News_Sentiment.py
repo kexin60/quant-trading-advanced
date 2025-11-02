@@ -326,7 +326,7 @@ class NewsDataCollector:
         if FINNHUB_AVAILABLE and self.api_keys.get('finnhub'):
             try:
                 self.finnhub_client = finnhub.Client(api_key=self.api_keys['finnhub'])
-                print("✅ Finnhub client initialized")
+                print("Finnhub client initialized")
             except Exception as e:
                 print(f"Finnhub initialization failed: {e}")
     
@@ -345,7 +345,7 @@ class NewsDataCollector:
         
         # Check cache
         if self._is_cached(cache_key):
-            print(f"📰 Using cached news for {symbol}")
+            print(f"Using cached news for {symbol}")
             return self.news_cache[cache_key]['data']
         
         news_articles = []
@@ -367,7 +367,7 @@ class NewsDataCollector:
             'timestamp': time.time()
         }
         
-        print(f"📰 Collected {len(news_articles)} news articles for {symbol}")
+        print(f"Collected {len(news_articles)} news articles for {symbol}")
         return news_articles
     
     def _get_newsapi_articles(self, symbol: str, start_time: datetime, end_time: datetime) -> List[Dict]:
@@ -907,8 +907,8 @@ class EventDrivenTradingStrategy:
         Returns:
             Backtesting results
         """
-        print(f"📈 Starting backtest: {start_date} to {end_date}")
-        print(f"🎭 Using sentiment: {use_sentiment}")
+        print(f" Starting backtest: {start_date} to {end_date}")
+        print(f" Using sentiment: {use_sentiment}")
         
         # Reset portfolio
         self.current_capital = self.initial_capital
@@ -919,7 +919,7 @@ class EventDrivenTradingStrategy:
         # Get historical data for all symbols
         historical_data = {}
         if not YFINANCE_AVAILABLE:
-            print("⚠️ yfinance not available. Using simulated data for backtesting.")
+            print(" yfinance not available. Using simulated data for backtesting.")
             # Create dummy data for demonstration
             date_range = pd.date_range(start=start_date, end=end_date, freq='D')
             for symbol in self.symbols:
@@ -1004,7 +1004,7 @@ class EventDrivenTradingStrategy:
             'performance_metrics': performance_metrics
         }
         
-        print(f"✅ Backtest completed:")
+        print(f"   Backtest completed:")
         print(f"   Total Return: {results['total_return']:.2%}")
         print(f"   Final Value: ${results['final_capital']:,.2f}")
         print(f"   Total Trades: {results['trade_count']}")
@@ -1070,14 +1070,14 @@ class StrategyComparison:
         print("🔄 Running strategy comparison...")
         
         # Test with sentiment
-        print("\n📰 Testing strategy WITH sentiment analysis...")
+        print("\n Testing strategy WITH sentiment analysis...")
         strategy_with_sentiment = EventDrivenTradingStrategy(self.symbols, self.initial_capital)
         results_with_sentiment = strategy_with_sentiment.backtest_strategy(
             start_date, end_date, use_sentiment=True
         )
         
         # Test without sentiment
-        print("\n📊 Testing strategy WITHOUT sentiment analysis...")
+        print("\n Testing strategy WITHOUT sentiment analysis...")
         strategy_without_sentiment = EventDrivenTradingStrategy(self.symbols, self.initial_capital)
         results_without_sentiment = strategy_without_sentiment.backtest_strategy(
             start_date, end_date, use_sentiment=False
@@ -1158,7 +1158,7 @@ class StrategyComparison:
             return
         
         print("\n" + "="*60)
-        print("📊 STRATEGY COMPARISON SUMMARY")
+        print("STRATEGY COMPARISON SUMMARY")
         print("="*60)
         
         with_sentiment = self.results['with_sentiment']
@@ -1293,7 +1293,7 @@ class StrategyComparison:
 
 def main():
     """Main execution function"""
-    print("🚀 Event-Driven Trading Strategy with News Sentiment Analysis")
+    print("Event Driven Trading Strategy with News Sentiment Analysis")
     print("="*60)
     
     # Configuration
@@ -1348,7 +1348,7 @@ def generate_summary_report(results: Dict):
     
     with open(report_path, 'w') as f:
         f.write("# Event-Driven Trading Strategy with News Sentiment Analysis\n\n")
-        f.write(f"**Report Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+        f.write(f"Report Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
         
         # Executive Summary
         f.write("## Executive Summary\n\n")
@@ -1358,10 +1358,10 @@ def generate_summary_report(results: Dict):
         benchmark = results['benchmark']
         comparison = results['comparison_metrics']
         
-        f.write(f"- **Strategy with Sentiment:** {with_sentiment['total_return']:.2%} return\n")
-        f.write(f"- **Strategy without Sentiment:** {without_sentiment['total_return']:.2%} return\n")
-        f.write(f"- **Benchmark (SPY):** {benchmark['total_return']:.2%} return\n")
-        f.write(f"- **Sentiment Advantage:** {comparison['sentiment_advantage']:.2%}\n\n")
+        f.write(f"- Strategy with Sentiment: {with_sentiment['total_return']:.2%} return\n")
+        f.write(f"- Strategy without Sentiment: {without_sentiment['total_return']:.2%} return\n")
+        f.write(f"- Benchmark (SPY): {benchmark['total_return']:.2%} return\n")
+        f.write(f"- Sentiment Advantage: {comparison['sentiment_advantage']:.2%}\n\n")
         
         # Performance Metrics
         f.write("## Performance Metrics\n\n")
@@ -1376,10 +1376,10 @@ def generate_summary_report(results: Dict):
         f.write("## Key Insights\n\n")
         
         if comparison['sentiment_advantage'] > 0:
-            f.write("✅ **Sentiment analysis provides positive alpha**\n")
+            f.write("Sentiment analysis provides positive alpha\n")
             f.write(f"   - The sentiment-enhanced strategy outperformed by {comparison['sentiment_advantage']:.2%}\n")
         else:
-            f.write("❌ **Sentiment analysis did not add value in this period**\n")
+            f.write("Sentiment analysis did not add value in this period\n")
             f.write(f"   - The sentiment-enhanced strategy underperformed by {abs(comparison['sentiment_advantage']):.2%}\n")
         
         f.write(f"\n- Both strategies vs benchmark:\n")
@@ -1389,20 +1389,20 @@ def generate_summary_report(results: Dict):
         # Methodology
         f.write("## Methodology\n\n")
         f.write("### Sentiment Analysis\n")
-        f.write("- **Model:** FinBERT (Financial BERT) for financial text sentiment\n")
-        f.write("- **Data Sources:** Yahoo Finance News, NewsAPI, Finnhub\n")
-        f.write("- **Signal Generation:** Weighted average of recent news sentiment\n")
-        f.write("- **Time Decay:** Recent news weighted more heavily\n\n")
+        f.write("- Model:FinBERT (Financial BERT) for financial text sentiment\n")
+        f.write("- Data Sources: Yahoo Finance News, NewsAPI, Finnhub\n")
+        f.write("- Signal Generation: Weighted average of recent news sentiment\n")
+        f.write("- Time Decay: Recent news weighted more heavily\n\n")
         
         f.write("### Technical Analysis\n")
-        f.write("- **Indicators:** RSI, MACD, Bollinger Bands, Moving Averages\n")
-        f.write("- **Signal Combination:** Weighted average of all technical signals\n")
-        f.write("- **Momentum:** Short and medium-term price momentum\n\n")
+        f.write("- Indicators: RSI, MACD, Bollinger Bands, Moving Averages\n")
+        f.write("- Signal Combination: Weighted average of all technical signals\n")
+        f.write("- Momentum: Short and medium-term price momentum\n\n")
         
         f.write("### Risk Management\n")
-        f.write(f"- **Position Size:** Maximum {CONFIG['POSITION_SIZE']*100}% per position\n")
-        f.write(f"- **Stop Loss:** {CONFIG['STOP_LOSS']*100}%\n")
-        f.write(f"- **Take Profit:** {CONFIG['TAKE_PROFIT']*100}%\n\n")
+        f.write(f"- Position Size: Maximum {CONFIG['POSITION_SIZE']*100}% per position\n")
+        f.write(f"- Stop Loss: {CONFIG['STOP_LOSS']*100}%\n")
+        f.write(f"- Take Profit: {CONFIG['TAKE_PROFIT']*100}%\n\n")
         
         # Files Generated
         f.write("## Generated Files\n\n")
@@ -1411,7 +1411,7 @@ def generate_summary_report(results: Dict):
         f.write("- `event_driven_strategy_report.md` - This summary report\n\n")
         
         f.write("---\n")
-        f.write("*This report demonstrates the integration of NLP-based sentiment analysis with quantitative trading strategies.*\n")
+        f.write("This report demonstrates the integration of NLP-based sentiment analysis with quantitative trading strategies.\n")
     
     print(f"Summary report generated: {report_path}")
 
