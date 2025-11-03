@@ -73,7 +73,9 @@ try:
 except ImportError:
     PLOTLY_AVAILABLE = False
 
+# ============================================================================
 # Configuration Management
+# ============================================================================
 
 @dataclass
 class TradingConfig:
@@ -197,7 +199,9 @@ class TradingConfig:
         with open(config_path, 'w') as f:
             json.dump(asdict(self), f, indent=2)
 
+# ============================================================================
 # Performance and Risk Metrics
+# ============================================================================
 
 class PerformanceMetrics:
     """Calculate comprehensive performance and risk metrics"""
@@ -278,7 +282,9 @@ class PerformanceMetrics:
         
         return var, cvar
 
+# ============================================================================
 # Data Handler Module
+# ============================================================================
 
 class DataHandler:
     """Enhanced data acquisition and management system"""
@@ -572,7 +578,9 @@ class DataHandler:
         
         return real_time_prices
 
+# ============================================================================
 # Signal Generation Module
+# ============================================================================
 
 class SignalGenerator:
     """Advanced signal generation with multiple strategies and fusion"""
@@ -724,6 +732,9 @@ class SignalGenerator:
             best_model.fit(X_scaled, y)
             self.logger.info(f"Best model for {symbol}: {best_model_name} (score: {best_score:.4f})")
             
+            # Store scaler for later use
+            self.feature_scalers[symbol] = scaler
+            
             # Store model and associated data
             return {
                 'model': best_model,
@@ -756,6 +767,9 @@ class SignalGenerator:
                     return features
                 except Exception as e:
                     self.logger.warning(f"Failed to load cached features for {symbol}: {e}")
+        else:
+            cache_key = None
+            cache_file = None
         
         # Compute features if not cached
         df = data.copy()
@@ -809,10 +823,8 @@ class SignalGenerator:
         features_clean = features.dropna()
         
         # Save to cache if enabled
-        if self.config.enable_feature_caching and symbol:
+        if self.config.enable_feature_caching and symbol and cache_key:
             try:
-                cache_key = f"{symbol}_{data_hash}_{len(data)}"
-                cache_file = os.path.join(self.cache_dir, f"features_{cache_key}.pkl")
                 with open(cache_file, 'wb') as f:
                     pickle.dump(features_clean, f)
                 self.logger.debug(f"Cached features for {symbol}")
@@ -872,6 +884,10 @@ class SignalGenerator:
                     continue
                 
                 # Scale features
+                if symbol not in self.feature_scalers:
+                    self.logger.warning(f"No feature scaler available for {symbol}")
+                    continue
+                    
                 scaler = self.feature_scalers[symbol]
                 X_scaled = scaler.transform(X)
                 
@@ -891,6 +907,8 @@ class SignalGenerator:
                 
             except Exception as e:
                 self.logger.error(f"Error generating ML signal for {symbol}: {e}")
+                self.logger.debug(f"Available models: {list(self.models.keys())}")
+                self.logger.debug(f"Available scalers: {list(self.feature_scalers.keys())}")
                 continue
         
         return signals
@@ -1093,7 +1111,9 @@ class SignalGenerator:
         
         return analysis
 
+# ============================================================================
 # Risk Management Module
+# ============================================================================
 
 class RiskManager:
     """Advanced risk management with VaR, position sizing, and regime detection"""
@@ -1667,7 +1687,9 @@ class MarketRegimeDetector:
         
         return regime
 
+# ============================================================================
 # Portfolio Optimization Module
+# ============================================================================
 
 class PortfolioOptimizer:
     """Advanced portfolio optimization with multiple objectives"""
@@ -1991,7 +2013,9 @@ class PortfolioOptimizer:
             'sharpe_ratios': frontier_sharpe
         }
 
+# ============================================================================
 # Execution Handler Module
+# ============================================================================
 
 class ExecutionHandler:
     """Advanced execution engine with IBKR integration and transaction cost analysis"""
@@ -2019,53 +2043,144 @@ class ExecutionHandler:
         if not self.config.simulate_trading and IBKR_AVAILABLE:
             self._connect_to_ibkr()
     
-    def _connect_to_ibkr(self, max_retries: int = 3):
-        """Connect to Interactive Brokers API with retry mechanism"""
+    def _connect_to_ibkr(self, max_retries: int = 5):
+        """Enhanced IBKR connection with Paper Trading optimization"""
+        
+        # 首先测试端口连接
+        import socket
+        import random
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(3)
+            result = sock.connect_ex((self.config.ib_host, self.config.ib_port))
+            sock.close()
+            
+            if result != 0:
+                self.logger.error(f" 无法连接到端口 {self.config.ib_port}")
+                self.logger.error("  解决方案:")
+                self.logger.error("1. 确认TWS或IB Gateway正在运行")
+                self.logger.error("2. 检查端口设置 (7497=Paper, 7496=Live)")
+                self.logger.error("3. 查看TWS_API_SETUP_GUIDE.md获取详细设置步骤")
+                return False
+            else:
+                self.logger.info(f" 端口 {self.config.ib_port} 可访问")
+        except Exception as e:
+            self.logger.error(f"端口测试失败: {e}")
+            return False
+        
+        # Paper Trading 优化的连接策略
+        client_ids_to_try = [
+            self.config.ib_client_id,
+            random.randint(1, 999),
+            0,
+            random.randint(100, 500)
+        ]
+        
         for attempt in range(max_retries):
+            client_id = client_ids_to_try[attempt % len(client_ids_to_try)]
+            
             try:
-                self.ib = IB()
-                self.logger.info(f"Attempting to connect to IBKR (attempt {attempt + 1}/{max_retries})")
+                # 断开之前的连接
+                if hasattr(self, 'ib') and self.ib and self.ib.isConnected():
+                    self.ib.disconnect()
+                    time.sleep(1)
                 
-                # Test connection
-                success = self.ib.connect(self.config.ib_host, self.config.ib_port, clientId=self.config.ib_client_id)
+                self.ib = IB()
+                self.logger.info(f"🔌 Paper Trading连接尝试 {attempt + 1}/{max_retries} (客户端ID: {client_id})")
+                
+                # Paper Trading 优化设置
+                timeout = 15 + attempt * 3  # 递增超时时间
+                
+                success = self.ib.connect(
+                    host=self.config.ib_host, 
+                    port=self.config.ib_port, 
+                    clientId=client_id,
+                    timeout=timeout,
+                    readonly=False  # Paper Trading不使用只读模式
+                )
                 
                 if not success:
-                    raise ConnectionError("IBKR connection returned False")
+                    raise ConnectionError(f"IBKR连接返回False (客户端ID: {client_id})")
                 
-                # Configure market data
-                self.ib.reqMarketDataType(self.config.market_data_type)
+                # 验证连接状态
+                if not self.ib.isConnected():
+                    raise ConnectionError("连接后状态检查失败")
                 
-                # Create contracts for symbols
-                for symbol in self.config.symbols:
-                    contract = Stock(symbol, 'SMART', 'USD')
-                    self.ib.qualifyContracts(contract)
-                    self.contracts[symbol] = contract
-                
-                self.logger.info(f"  Successfully connected to IBKR (Client ID: {self.config.ib_client_id})")
-                self.logger.info(f"   Host: {self.config.ib_host}:{self.config.ib_port}")
-                self.logger.info(f"   Paper Trading: {'Yes' if self.config.ib_port == 7497 else 'No'}")
-                return True
+                # 快速验证连接质量
+                try:
+                    accounts = self.ib.managedAccounts()
+                    if not accounts:
+                        raise ConnectionError("无法获取账户信息")
+                    
+                    # 更新配置中的客户端ID为成功的ID
+                    self.config.ib_client_id = client_id
+                    
+                    self.logger.info(f" Paper Trading连接成功! (客户端ID: {client_id})")
+                    self.logger.info(f" 连接到账户: {accounts}")
+                    
+                    # 检查账户类型
+                    for account in accounts:
+                        if account.startswith('D'):
+                            self.logger.info(" 确认Paper Trading账户")
+                        else:
+                            self.logger.warning(" 注意: 这是真实交易账户!")
+                    
+                    # Configure market data
+                    self.ib.reqMarketDataType(self.config.market_data_type)
+                    
+                    # Create contracts for symbols
+                    for symbol in self.config.symbols:
+                        try:
+                            contract = Stock(symbol, 'SMART', 'USD')
+                            self.ib.qualifyContracts(contract)
+                            self.contracts[symbol] = contract
+                            self.logger.debug(f" 合约创建成功: {symbol}")
+                        except Exception as e:
+                            self.logger.warning(f"合约创建失败 {symbol}: {e}")
+                    
+                    self.logger.info(f"🎉 IBKR连接成功!")
+                    self.logger.info(f"   主机: {self.config.ib_host}:{self.config.ib_port}")
+                    self.logger.info(f"   客户端ID: {client_id}")
+                    self.logger.info(f"   交易模式: {'Paper Trading' if self.config.ib_port == 7497 else 'Live Trading'}")
+                    
+                    return True
+                    
+                except Exception as verify_error:
+                    self.logger.warning(f"连接验证失败: {verify_error}")
+                    if self.ib.isConnected():
+                        self.ib.disconnect()
+                    continue
                 
             except Exception as e:
-                self.logger.warning(f"IBKR connection attempt {attempt + 1} failed: {e}")
-                if self.ib:
-                    try:
+                error_msg = str(e)
+                if 'TimeoutError' in error_msg:
+                    self.logger.warning(f" 连接超时 (尝试 {attempt + 1})")
+                elif 'already connected' in error_msg.lower():
+                    self.logger.warning(" 检测到已有连接，尝试断开后重连")
+                else:
+                    self.logger.warning(f" 连接失败: {error_msg}")
+                
+                # 确保断开连接
+                try:
+                    if hasattr(self, 'ib') and self.ib and self.ib.isConnected():
                         self.ib.disconnect()
-                    except:
-                        pass
-                    self.ib = None
-                
-                if attempt < max_retries - 1:
-                    import time
-                    time.sleep(2)  # Wait before retry
-                
-        # All attempts failed
-        self.logger.error(" Failed to connect to IBKR after all attempts")
-        self.logger.error("Please ensure:")
-        self.logger.error("1. TWS or IB Gateway is running")
-        self.logger.error("2. API connections are enabled in TWS settings")
-        self.logger.error("3. Correct port number (7497 for Paper, 7496 for Live)")
-        self.logger.error("4. Socket port is available")
+                except:
+                    pass
+            
+            # 等待后重试
+            if attempt < max_retries - 1:
+                wait_time = 3 + attempt * 2
+                self.logger.info(f" 等待 {wait_time} 秒后重试...")
+                time.sleep(wait_time)
+        
+        # 所有尝试都失败
+        self.logger.error(" Paper Trading连接失败，所有重试都无效")
+        self.logger.error(" 建议:")
+        self.logger.error("1. 重启TWS并等待完全加载")
+        self.logger.error("2. 检查TWS右下角连接状态为绿色")
+        self.logger.error("3. 确保没有弹窗或错误消息")
+        self.logger.error("4. 或者暂时使用模拟模式运行系统")
+        
         return False
     
     def _check_connection(self) -> bool:
@@ -2434,7 +2549,9 @@ class ExecutionHandler:
             except Exception as e:
                 self.logger.error(f"Error disconnecting from IBKR: {e}")
 
+# ============================================================================
 # Reporting and Visualization Module
+# ============================================================================
 
 class ReportGenerator:
     """Comprehensive reporting and visualization system"""
@@ -3956,8 +4073,17 @@ class QuantTradingEnginePlus:
             
             # 3. 组合优化和风险管理（含平滑换仓）
             self.logger.info("3/5 - 执行组合优化...")
-            portfolio_value = sum(pos * prices_dict.get(symbol, 0) 
+            
+            # 计算持仓价值
+            positions_value = sum(pos * prices_dict.get(symbol, 0) 
                                 for symbol, pos in self.current_positions.items())
+            
+            # 如果没有持仓，使用初始资金作为组合价值
+            if positions_value == 0 and not self.current_positions:
+                portfolio_value = self.config.initial_capital
+            else:
+                portfolio_value = positions_value
+                
             cycle_results['portfolio_value'] = portfolio_value
             
             # 如果启用了平滑换仓，使用新的优化方法
@@ -4130,7 +4256,11 @@ class QuantTradingEnginePlus:
             total_value = 0.0
             for symbol, position in self.current_positions.items():
                 if symbol in current_prices:
-                    total_value += position * current_prices[symbol]
+                    # 确保价格是数字而不是字典
+                    price = current_prices[symbol]
+                    if isinstance(price, dict):
+                        price = price.get('price', 0)
+                    total_value += position * price
             
             # 计算每日收益率
             daily_ret = 0.0
@@ -4360,7 +4490,7 @@ def main():
         config.symbols = args.symbols
     
     print("="*60)
-    print("Quant Trading Engine Plus")
+    print("🚀 Quant Trading Engine Plus")
     print("="*60)
     print(f"Mode: {args.mode.upper()}")
     print(f"Symbols: {config.symbols}")
@@ -4404,7 +4534,7 @@ def main():
         print(" 所有报告已生成")
         print(" 交易数据已保存")
         print("="*50)
-        print("谢谢使用！期待下次交易 ")
+        print("谢谢使用！期待下次交易 ✨")
         print("="*50)
 
 if __name__ == "__main__":
