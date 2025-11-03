@@ -2086,7 +2086,7 @@ class ExecutionHandler:
                     time.sleep(1)
                 
                 self.ib = IB()
-                self.logger.info(f"🔌 Paper Trading连接尝试 {attempt + 1}/{max_retries} (客户端ID: {client_id})")
+                self.logger.info(f" Paper Trading连接尝试 {attempt + 1}/{max_retries} (客户端ID: {client_id})")
                 
                 # Paper Trading 优化设置
                 timeout = 15 + attempt * 3  # 递增超时时间
@@ -3345,7 +3345,7 @@ class QuantTradingEnginePlus:
                 self.ib.connect('127.0.0.1', 7497, clientId=client_id)
                 if self.ib.isConnected():
                     self.connected = True
-                    self.logger.info("✅ IBKR Paper Trading connection established successfully")
+                    self.logger.info(" IBKR Paper Trading connection established successfully")
                     break
             except Exception as e:
                 self.logger.warning(f"Paper Trading attempt {attempt+1} failed: {e}")
@@ -4631,7 +4631,7 @@ def main():
         print(" 所有报告已生成")
         print(" 交易数据已保存")
         print("="*50)
-        print("谢谢使用！期待下次交易 ✨")
+        print("谢谢使用！期待下次交易 ")
         print("="*50)
 
 if __name__ == "__main__":
