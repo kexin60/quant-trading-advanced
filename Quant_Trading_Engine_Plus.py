@@ -2138,7 +2138,7 @@ class ExecutionHandler:
                         except Exception as e:
                             self.logger.warning(f"合约创建失败 {symbol}: {e}")
                     
-                    self.logger.info(f"🎉 IBKR连接成功!")
+                    self.logger.info(f"   IBKR连接成功!")
                     self.logger.info(f"   主机: {self.config.ib_host}:{self.config.ib_port}")
                     self.logger.info(f"   客户端ID: {client_id}")
                     self.logger.info(f"   交易模式: {'Paper Trading' if self.config.ib_port == 7497 else 'Live Trading'}")
@@ -3311,6 +3311,10 @@ class QuantTradingEnginePlus:
         self.last_trade_time = {}
         self.performance_history = []
         
+        # IBKR Connection State
+        self.ib = None
+        self.connected = False
+        
         # Trading schedule control
         self.last_rebalance_date = None
         self.daily_rebalance_hour = 15  # 3 PM market close time
@@ -3323,6 +3327,50 @@ class QuantTradingEnginePlus:
         """Initialize the trading engine with data and models"""
         
         self.logger.info("Initializing trading engine...")
+        
+        # First establish IBKR connection
+        self.logger.info("Establishing IBKR connection...")
+        from ib_insync import IB
+        import random
+        import time
+        
+        self.ib = IB()
+        self.connected = False
+        
+        # Try Paper Trading first with retries
+        for attempt in range(3):
+            try:
+                client_id = random.randint(1, 999) if attempt > 0 else 1
+                self.logger.info(f"Paper Trading connection attempt {attempt+1}/3 (Client ID: {client_id})")
+                self.ib.connect('127.0.0.1', 7497, clientId=client_id)
+                if self.ib.isConnected():
+                    self.connected = True
+                    self.logger.info("✅ IBKR Paper Trading connection established successfully")
+                    break
+            except Exception as e:
+                self.logger.warning(f"Paper Trading attempt {attempt+1} failed: {e}")
+                if attempt < 2:  # Don't sleep after last attempt
+                    time.sleep(2)
+        
+        # If Paper Trading failed, try Live Trading with retries
+        if not self.connected:
+            self.logger.info("Paper Trading failed, trying Live Trading...")
+            for attempt in range(3):
+                try:
+                    client_id = random.randint(1, 999) if attempt > 0 else 1
+                    self.logger.info(f"Live Trading connection attempt {attempt+1}/3 (Client ID: {client_id})")
+                    self.ib.connect('127.0.0.1', 7496, clientId=client_id)
+                    if self.ib.isConnected():
+                        self.connected = True
+                        self.logger.info(" IBKR Live Trading connection established successfully")
+                        break
+                except Exception as e:
+                    self.logger.warning(f"Live Trading attempt {attempt+1} failed: {e}")
+                    if attempt < 2:  # Don't sleep after last attempt
+                        time.sleep(2)
+        
+        if not self.connected:
+            raise ConnectionError(" Failed to establish IBKR connection. Both Paper Trading (7497) and Live Trading (7496) failed after 3 attempts each. Please ensure TWS/IB Gateway is running.")
         
         try:
             # Load historical data
@@ -3583,6 +3631,28 @@ class QuantTradingEnginePlus:
         
         cycle_start = time.time()
         self.logger.info(f"=== Trading Cycle {iteration} ===")
+        
+        # Add connection monitoring and auto-reconnect at the beginning of main loop
+        if not self.config.simulate_trading:
+            print(f"🔌 IBKR connection status: {self.connected}")
+            if self.ib:
+                print(f"🔗 IB client connected: {self.ib.isConnected()}")
+            
+            # Check for disconnection and reconnect if necessary
+            if self.connected and self.ib and not self.ib.isConnected():
+                print("  Connection lost, reconnecting...")
+                try:
+                    self.ib.connect(self.config.ib_host, self.config.ib_port, self.config.ib_client_id)
+                    if self.ib.isConnected():
+                        print(" Reconnection successful!")
+                    else:
+                        self.connected = False
+                        print(" Reconnection failed!")
+                        return
+                except Exception as e:
+                    self.connected = False
+                    print(f" Reconnection error: {e}")
+                    return
         
         # Check if we should skip this cycle due to timing
         if not self._is_market_hours() and not self.config.simulate_trading:
@@ -4035,6 +4105,33 @@ class QuantTradingEnginePlus:
             Dict containing cycle results and reports
         """
         self.logger.info("开始执行每日交易周期...")
+        
+        # Status display at the beginning
+        print(f" IBKR connection status: {self.connected}")
+        if self.ib:
+            print(f" IB client connected: {self.ib.isConnected()}")
+        
+        # Check for disconnection and reconnect if necessary
+        if self.connected and self.ib and not self.ib.isConnected():
+            print("  Connection lost, reconnecting...")
+            try:
+                self.ib.connect(self.config.ib_host, self.config.ib_port, self.config.ib_client_id)
+                if self.ib.isConnected():
+                    print(" Reconnection successful!")
+                else:
+                    self.connected = False
+                    print(" Reconnection failed!")
+            except Exception as e:
+                self.connected = False
+                print(f" Reconnection error: {e}")
+        
+        # Check IBKR connection status first
+        if not self.connected or not self.ib or not self.ib.isConnected():
+            error_msg = " IBKR connection required but not established. Cannot run daily cycle without direct connection."
+            self.logger.error(error_msg)
+            raise ConnectionError(error_msg)
+        
+        self.logger.info(" IBKR connection verified - proceeding with daily cycle")
         
         cycle_results = {
             'success': False,
