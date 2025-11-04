@@ -118,14 +118,8 @@ class TradingConfig:
     market_data_type: int = 3  # 1=Live, 2=Frozen, 3=Delayed, 4=Delayed-Frozen
     
     # Execution
-    simulate_trading: bool = True
     order_type: str = "MARKET"  # MARKET, LIMIT, ADAPTIVE
     execution_algo: str = "ADAPTIVE"  # Order execution algorithm
-    
-    # Transaction Costs (for simulation)
-    commission_rate: float = 0.005  # 0.5% commission rate
-    bid_ask_spread: float = 0.001   # 0.1% bid-ask spread
-    market_impact: float = 0.001    # 0.1% market impact cost
     
     # Portfolio-level Risk Controls
     portfolio_stop_loss_pct: float = 0.15      # 15% portfolio stop loss
@@ -1174,11 +1168,8 @@ class RiskManager:
                 # Strong buy signal
                 weight = min((signal - 0.5) * 2 * self.config.position_limit, self.config.position_limit)
             elif signal < self.config.signal_threshold_sell:
-                # Strong sell signal (or short if allowed)
-                if not self.config.simulate_trading:  # Only allow shorts in live trading
-                    weight = max((signal - 0.5) * 2 * self.config.position_limit, -self.config.position_limit)
-                else:
-                    weight = 0  # No shorts in simulation
+                # Strong sell signal - Paper Trading allows limited shorting
+                weight = max((signal - 0.5) * 2 * self.config.position_limit, -self.config.position_limit)
             else:
                 # Neutral signal
                 weight = 0
@@ -1205,7 +1196,7 @@ class RiskManager:
         # Check individual position limits
         for symbol in weights:
             weights[symbol] = max(min(weights[symbol], self.config.position_limit), 
-                                -self.config.position_limit if not self.config.simulate_trading else 0)
+                                -self.config.position_limit)  # Paper Trading allows limited shorts
         
         # Check portfolio concentration
         max_weight = max(abs(w) for w in weights.values()) if weights else 0
@@ -1834,11 +1825,8 @@ class PortfolioOptimizer:
         # Constraints
         constraints = ({'type': 'eq', 'fun': lambda w: np.sum(w) - 1})
         
-        # Bounds (no short selling in simulation mode)
-        if self.config.simulate_trading:
-            bounds = [(0, self.config.position_limit) for _ in range(n_assets)]
-        else:
-            bounds = [(-self.config.position_limit, self.config.position_limit) for _ in range(n_assets)]
+        # Bounds (no short selling for Paper Trading)
+        bounds = [(0, self.config.position_limit) for _ in range(n_assets)]
         
         # Initial guess
         x0 = np.array([1.0 / n_assets] * n_assets)
@@ -1858,11 +1846,8 @@ class PortfolioOptimizer:
         # Constraints
         constraints = ({'type': 'eq', 'fun': lambda w: np.sum(w) - 1})
         
-        # Bounds
-        if self.config.simulate_trading:
-            bounds = [(0, self.config.position_limit) for _ in range(n_assets)]
-        else:
-            bounds = [(-self.config.position_limit, self.config.position_limit) for _ in range(n_assets)]
+        # Bounds (no short selling for Paper Trading)
+        bounds = [(0, self.config.position_limit) for _ in range(n_assets)]
         
         # Initial guess
         x0 = np.array([1.0 / n_assets] * n_assets)
@@ -1887,11 +1872,8 @@ class PortfolioOptimizer:
         # Constraints
         constraints = ({'type': 'eq', 'fun': lambda w: np.sum(w) - 1})
         
-        # Bounds
-        if self.config.simulate_trading:
-            bounds = [(0, self.config.position_limit) for _ in range(n_assets)]
-        else:
-            bounds = [(-self.config.position_limit, self.config.position_limit) for _ in range(n_assets)]
+        # Bounds (no short selling for Paper Trading)
+        bounds = [(0, self.config.position_limit) for _ in range(n_assets)]
         
         # Initial guess
         x0 = np.array([1.0 / n_assets] * n_assets)
@@ -2035,13 +2017,12 @@ class ExecutionHandler:
         self.daily_returns = []
         self.daily_report_file = os.path.join(config.report_dir, 'daily_report.csv')
         
-        # Transaction cost parameters (now from config)
-        self.commission_rate = config.commission_rate
-        self.bid_ask_spread = config.bid_ask_spread
-        self.market_impact = config.market_impact
-        
-        if not self.config.simulate_trading and IBKR_AVAILABLE:
+        # Always connect to IBKR for Paper Trading
+        if IBKR_AVAILABLE:
             self._connect_to_ibkr()
+        else:
+            self.logger.error("IBKR library not available. Cannot proceed without ib_insync.")
+            raise ImportError("ib_insync library is required for Paper Trading")
     
     def _connect_to_ibkr(self, max_retries: int = 5):
         """Enhanced IBKR connection with Paper Trading optimization"""
@@ -2086,7 +2067,7 @@ class ExecutionHandler:
                     time.sleep(1)
                 
                 self.ib = IB()
-                self.logger.info(f" Paper Trading连接尝试 {attempt + 1}/{max_retries} (客户端ID: {client_id})")
+                self.logger.info(f"🔌 Paper Trading连接尝试 {attempt + 1}/{max_retries} (客户端ID: {client_id})")
                 
                 # Paper Trading 优化设置
                 timeout = 15 + attempt * 3  # 递增超时时间
@@ -2220,11 +2201,8 @@ class ExecutionHandler:
             
             price = current_prices[symbol]
             
-            # Execute trade
-            if self.config.simulate_trading:
-                result = self._simulate_trade(symbol, trade_qty, price)
-            else:
-                result = self._execute_real_trade(symbol, trade_qty, price)
+            # Execute real trade through IBKR Paper Trading
+            result = self._execute_real_trade(symbol, trade_qty, price)
             
             execution_results[symbol] = result
             
@@ -2234,35 +2212,6 @@ class ExecutionHandler:
                 self._record_execution(symbol, trade_qty, result['executed_price'], result)
         
         return execution_results
-    
-    def _simulate_trade(self, symbol: str, quantity: int, price: float) -> Dict:
-        """Simulate trade execution"""
-        
-        # Simulate transaction costs
-        commission = abs(quantity) * price * self.commission_rate
-        spread_cost = abs(quantity) * price * self.bid_ask_spread / 2
-        impact_cost = abs(quantity) * price * self.market_impact
-        
-        total_cost = commission + spread_cost + impact_cost
-        executed_price = price * (1 + self.bid_ask_spread/2 if quantity > 0 else 1 - self.bid_ask_spread/2)
-        
-        result = {
-            'status': 'filled',
-            'symbol': symbol,
-            'quantity': quantity,
-            'requested_price': price,
-            'executed_price': executed_price,
-            'commission': commission,
-            'total_cost': total_cost,
-            'timestamp': datetime.now(),
-            'order_type': 'SIMULATED'
-        }
-        
-        self.execution_costs[symbol] += total_cost
-        
-        self.logger.info(f"SIMULATED: {symbol} {quantity:+d} shares @ ${executed_price:.2f} (cost: ${total_cost:.2f})")
-        
-        return result
     
     def _execute_real_trade(self, symbol: str, quantity: int, price: float) -> Dict:
         """Execute real trade through IBKR"""
@@ -2399,7 +2348,7 @@ class ExecutionHandler:
     def get_current_positions(self) -> Dict[str, int]:
         """Get current positions"""
         
-        if not self.config.simulate_trading and self.ib:
+        if self.ib:
             try:
                 # Fetch real positions from IBKR
                 positions = {}
@@ -3345,7 +3294,7 @@ class QuantTradingEnginePlus:
                 self.ib.connect('127.0.0.1', 7497, clientId=client_id)
                 if self.ib.isConnected():
                     self.connected = True
-                    self.logger.info(" IBKR Paper Trading connection established successfully")
+                    self.logger.info("✅ IBKR Paper Trading connection established successfully")
                     break
             except Exception as e:
                 self.logger.warning(f"Paper Trading attempt {attempt+1} failed: {e}")
@@ -3633,35 +3582,31 @@ class QuantTradingEnginePlus:
         self.logger.info(f"=== Trading Cycle {iteration} ===")
         
         # Add connection monitoring and auto-reconnect at the beginning of main loop
-        if not self.config.simulate_trading:
-            print(f"🔌 IBKR connection status: {self.connected}")
-            if self.ib:
-                print(f"🔗 IB client connected: {self.ib.isConnected()}")
-            
-            # Check for disconnection and reconnect if necessary
-            if self.connected and self.ib and not self.ib.isConnected():
-                print("  Connection lost, reconnecting...")
-                try:
-                    self.ib.connect(self.config.ib_host, self.config.ib_port, self.config.ib_client_id)
-                    if self.ib.isConnected():
-                        print(" Reconnection successful!")
-                    else:
-                        self.connected = False
-                        print(" Reconnection failed!")
-                        return
-                except Exception as e:
-                    self.connected = False
-                    print(f" Reconnection error: {e}")
-                    return
+        print(f"🔌 IBKR connection status: {self.connected}")
+        if self.ib:
+            print(f"🔗 IB client connected: {self.ib.isConnected()}")
         
-        # Check if we should skip this cycle due to timing
-        if not self._is_market_hours() and not self.config.simulate_trading:
-            self.logger.info("Outside market hours, skipping cycle")
-            return
+        # Check for disconnection and reconnect if necessary
+        if self.connected and self.ib and not self.ib.isConnected():
+            print("  Connection lost, reconnecting...")
+            try:
+                self.ib.connect(self.config.ib_host, self.config.ib_port, self.config.ib_client_id)
+                if self.ib.isConnected():
+                    print(" Reconnection successful!")
+                else:
+                    self.connected = False
+                    print(" Reconnection failed!")
+                    return
+            except Exception as e:
+                self.connected = False
+                print(f" Reconnection error: {e}")
+                return
+        
+        # Note: Paper Trading operates during extended hours
         
         # Check if it's time for daily rebalancing
         should_rebalance = self._should_rebalance()
-        if not should_rebalance and not self.config.simulate_trading:
+        if not should_rebalance:
             self.logger.info("Not time for daily rebalancing, monitoring only")
             # Still update metrics but don't trade
             self._update_portfolio_metrics_only()
@@ -4506,15 +4451,17 @@ def run_daily_trading():
     print("启动每日量化交易系统")
     print("="*60)
     
-    # 创建默认配置
+    # 创建默认配置 - Paper Trading模式
     config = TradingConfig(
-        simulate_trading=True,   # Paper 模式
         symbols=["AAPL", "QQQ", "VOO"],
-        report_dir="reports"
+        report_dir="reports",
+        ib_host="127.0.0.1",
+        ib_port=7497,  # Paper Trading端口
+        ib_client_id=1
     )
     
     print(f"交易标的: {config.symbols}")
-    print(f"模拟交易: {config.simulate_trading}")
+    print(f"Paper Trading: IBKR端口 {config.ib_port}")
     print(f"报告目录: {config.report_dir}")
     print("="*60)
     
@@ -4591,7 +4538,7 @@ def main():
     print("="*60)
     print(f"Mode: {args.mode.upper()}")
     print(f"Symbols: {config.symbols}")
-    print(f"Simulation: {config.simulate_trading}")
+    print(f"Paper Trading: IBKR端口 {config.ib_port}")
     print("="*60)
     
     try:
@@ -4631,7 +4578,7 @@ def main():
         print(" 所有报告已生成")
         print(" 交易数据已保存")
         print("="*50)
-        print("谢谢使用！期待下次交易 ")
+        print("谢谢使用！期待下次交易")
         print("="*50)
 
 if __name__ == "__main__":
