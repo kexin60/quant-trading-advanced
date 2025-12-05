@@ -1,3 +1,18 @@
+# Quant Trading Engine Plus - Enhanced Modular Trading System
+# 
+# This enhanced trading engine provides a modular, extensible framework for quantitative trading
+# with advanced risk management, multiple signal sources, and robust execution capabilities.
+# Designed for seamless integration with Interactive Brokers (IBKR) API.
+#
+# Key Features:
+# - Modular architecture with pluggable components
+# - Multiple data sources and real-time feeds
+# - Advanced signal fusion and ML models
+# - Comprehensive risk management and portfolio optimization
+# - Robust execution engine with transaction cost analysis
+# - Configuration-driven parameter management
+# - Real-time monitoring and reporting
+
 import os
 import sys
 import json
@@ -111,6 +126,9 @@ class TradingConfig:
     refresh_interval: int = 5  # Seconds between market data updates
     data_sources: List[str] = None  # ['yahoo', 'ibkr', 'csv']
     
+    # Trading Mode
+    simulate_trading: bool = True  # True = run fully simulated execution without IBKR
+    
     # IBKR Configuration
     ib_host: str = "127.0.0.1"
     ib_port: int = 7497  # Paper trading port
@@ -120,6 +138,9 @@ class TradingConfig:
     # Execution
     order_type: str = "MARKET"  # MARKET, LIMIT, ADAPTIVE
     execution_algo: str = "ADAPTIVE"  # Order execution algorithm
+    commission_rate: float = 0.001   # Default commission rate (0.1%)
+    bid_ask_spread: float = 0.0005   # Default assumed bid-ask spread (0.05%)
+    market_impact: float = 0.001     # Market impact cost assumption (0.1%)
     
     # Portfolio-level Risk Controls
     portfolio_stop_loss_pct: float = 0.15      # 15% portfolio stop loss
@@ -2011,18 +2032,23 @@ class ExecutionHandler:
         self.positions = defaultdict(int)
         self.pending_orders = {}
         self.logger = logging.getLogger(__name__)
+        self.simulation_mode = bool(getattr(self.config, 'simulate_trading', False))
+        self.simulated_cash = float(self.config.initial_capital)
         
         # Daily return tracking
         self.last_portfolio_value = None
         self.daily_returns = []
         self.daily_report_file = os.path.join(config.report_dir, 'daily_report.csv')
         
-        # Always connect to IBKR for Paper Trading
-        if IBKR_AVAILABLE:
-            self._connect_to_ibkr()
+        if self.simulation_mode:
+            self.logger.info("Simulation trading mode enabled - skipping IBKR connection.")
         else:
-            self.logger.error("IBKR library not available. Cannot proceed without ib_insync.")
-            raise ImportError("ib_insync library is required for Paper Trading")
+            if not IBKR_AVAILABLE:
+                self.logger.error("IBKR library not available. Cannot trade in live mode without ib_insync.")
+                raise ImportError("ib_insync library is required for live/Paper Trading execution")
+            connected = self._connect_to_ibkr()
+            if not connected:
+                raise ConnectionError("Unable to establish IBKR connection in live mode")
     
     def _connect_to_ibkr(self, max_retries: int = 5):
         """Enhanced IBKR connection with Paper Trading optimization"""
@@ -2176,6 +2202,9 @@ class ExecutionHandler:
     
     def _ensure_connection(self) -> bool:
         """Ensure IBKR connection is active, reconnect if necessary"""
+        if self.simulation_mode:
+            return True
+        
         if self._check_connection():
             return True
         
@@ -2201,8 +2230,11 @@ class ExecutionHandler:
             
             price = current_prices[symbol]
             
-            # Execute real trade through IBKR Paper Trading
-            result = self._execute_real_trade(symbol, trade_qty, price)
+            # Execute either a real IBKR trade or a simulated fill
+            if self.simulation_mode:
+                result = self._execute_simulated_trade(symbol, trade_qty, price)
+            else:
+                result = self._execute_real_trade(symbol, trade_qty, price)
             
             execution_results[symbol] = result
             
@@ -2304,6 +2336,39 @@ class ExecutionHandler:
                 'quantity': quantity,
                 'error': str(e)
             }
+
+    def _execute_simulated_trade(self, symbol: str, quantity: int, price: float) -> Dict:
+        """Simulate trade execution when running without IBKR"""
+        
+        trade_value = quantity * price
+        if quantity > 0 and trade_value > self.simulated_cash:
+            return {
+                'status': 'rejected',
+                'symbol': symbol,
+                'quantity': quantity,
+                'error': 'Insufficient simulated cash for trade'
+            }
+        
+        # Update simulated cash balance
+        self.simulated_cash -= trade_value
+        executed_price = price
+        
+        result = {
+            'status': 'filled',
+            'symbol': symbol,
+            'quantity': quantity,
+            'requested_price': price,
+            'executed_price': executed_price,
+            'commission': 0.0,
+            'total_cost': 0.0,
+            'timestamp': datetime.now(),
+            'order_type': 'SIMULATED',
+            'mode': 'simulation',
+            'cash_balance': self.simulated_cash
+        }
+        
+        self.logger.info(f"[SIM] EXECUTED: {symbol} {quantity:+d} @ ${executed_price:.2f} | Cash ${self.simulated_cash:,.2f}")
+        return result
     
     def _record_execution(self, symbol: str, quantity: int, price: float, execution_details: Dict):
         """Record execution details"""
@@ -2377,10 +2442,13 @@ class ExecutionHandler:
             if symbol in current_prices and current_prices[symbol] > 0:
                 portfolio_value += position * current_prices[symbol]
         
+        cash_value = self.simulated_cash if self.simulation_mode else 0.0
+        total_value = portfolio_value + cash_value
+        
         # Calculate daily return if we have previous value
         daily_return = 0.0
         if self.last_portfolio_value is not None and self.last_portfolio_value > 0:
-            daily_return = (portfolio_value - self.last_portfolio_value) / self.last_portfolio_value
+            daily_return = (total_value - self.last_portfolio_value) / self.last_portfolio_value
         
         # Save to CSV file
         try:
@@ -2393,18 +2461,18 @@ class ExecutionHandler:
             # Append daily data
             with open(self.daily_report_file, 'a') as f:
                 date_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                f.write(f"{date_str},{portfolio_value:.2f},{daily_return*100:.4f},{portfolio_value:.2f}\n")
+                f.write(f"{date_str},{total_value:.2f},{daily_return*100:.4f},{cash_value:.2f}\n")
             
-            self.logger.info(f"Daily return recorded: Portfolio ${portfolio_value:,.2f}, Return {daily_return*100:+.2f}%")
+            self.logger.info(f"Daily return recorded: Portfolio ${total_value:,.2f}, Return {daily_return*100:+.2f}%")
             
         except Exception as e:
             self.logger.error(f"Error saving daily return: {e}")
         
         # Update tracking variables
-        self.last_portfolio_value = portfolio_value
+        self.last_portfolio_value = total_value
         self.daily_returns.append({
             'date': datetime.now(),
-            'portfolio_value': portfolio_value,
+            'portfolio_value': total_value,
             'daily_return': daily_return
         })
         
@@ -2437,7 +2505,9 @@ class ExecutionHandler:
     def save_daily_report(self, current_prices: Dict[str, float]):
         """简化的每日报告保存方法 - 包含详细性能指标"""
         try:
-            total_value = sum(pos * current_prices.get(sym, 0) for sym, pos in self.positions.items())
+            position_value = sum(pos * current_prices.get(sym, 0) for sym, pos in self.positions.items())
+            cash_value = self.simulated_cash if self.simulation_mode else 0.0
+            total_value = position_value + cash_value
             
             if self.last_portfolio_value is not None and self.last_portfolio_value > 0:
                 daily_ret = (total_value - self.last_portfolio_value) / self.last_portfolio_value
@@ -3232,6 +3302,7 @@ class QuantTradingEnginePlus:
         """Initialize the trading engine"""
         
         self.config = config or TradingConfig()
+        self.simulation_mode = bool(getattr(self.config, 'simulate_trading', False))
         
         # Setup logging
         logging.basicConfig(
@@ -3277,49 +3348,55 @@ class QuantTradingEnginePlus:
         
         self.logger.info("Initializing trading engine...")
         
-        # First establish IBKR connection
-        self.logger.info("Establishing IBKR connection...")
-        from ib_insync import IB
-        import random
-        import time
-        
-        self.ib = IB()
-        self.connected = False
-        
-        # Try Paper Trading first with retries
-        for attempt in range(3):
-            try:
-                client_id = random.randint(1, 999) if attempt > 0 else 1
-                self.logger.info(f"Paper Trading connection attempt {attempt+1}/3 (Client ID: {client_id})")
-                self.ib.connect('127.0.0.1', 7497, clientId=client_id)
-                if self.ib.isConnected():
-                    self.connected = True
-                    self.logger.info("✅ IBKR Paper Trading connection established successfully")
-                    break
-            except Exception as e:
-                self.logger.warning(f"Paper Trading attempt {attempt+1} failed: {e}")
-                if attempt < 2:  # Don't sleep after last attempt
-                    time.sleep(2)
-        
-        # If Paper Trading failed, try Live Trading with retries
-        if not self.connected:
-            self.logger.info("Paper Trading failed, trying Live Trading...")
+        if not self.simulation_mode:
+            if not IBKR_AVAILABLE:
+                raise ImportError("ib_insync is required for live/Paper Trading mode but is not available.")
+            
+            self.logger.info("Establishing IBKR connection...")
+            from ib_insync import IB
+            import random
+            import time
+            
+            self.ib = IB()
+            self.connected = False
+            
+            # Try Paper Trading first with retries
             for attempt in range(3):
                 try:
                     client_id = random.randint(1, 999) if attempt > 0 else 1
-                    self.logger.info(f"Live Trading connection attempt {attempt+1}/3 (Client ID: {client_id})")
-                    self.ib.connect('127.0.0.1', 7496, clientId=client_id)
+                    self.logger.info(f"Paper Trading connection attempt {attempt+1}/3 (Client ID: {client_id})")
+                    self.ib.connect(self.config.ib_host, self.config.ib_port, clientId=client_id)
                     if self.ib.isConnected():
                         self.connected = True
-                        self.logger.info(" IBKR Live Trading connection established successfully")
+                        self.logger.info(" IBKR Paper Trading connection established successfully")
                         break
                 except Exception as e:
-                    self.logger.warning(f"Live Trading attempt {attempt+1} failed: {e}")
+                    self.logger.warning(f"Paper Trading attempt {attempt+1} failed: {e}")
                     if attempt < 2:  # Don't sleep after last attempt
                         time.sleep(2)
-        
-        if not self.connected:
-            raise ConnectionError(" Failed to establish IBKR connection. Both Paper Trading (7497) and Live Trading (7496) failed after 3 attempts each. Please ensure TWS/IB Gateway is running.")
+            
+            # If Paper Trading failed, try Live Trading with retries
+            if not self.connected:
+                self.logger.info("Paper Trading failed, trying Live Trading...")
+                live_port = 7496 if self.config.ib_port == 7497 else self.config.ib_port
+                for attempt in range(3):
+                    try:
+                        client_id = random.randint(1, 999) if attempt > 0 else 1
+                        self.logger.info(f"Live Trading connection attempt {attempt+1}/3 (Client ID: {client_id})")
+                        self.ib.connect(self.config.ib_host, live_port, clientId=client_id)
+                        if self.ib.isConnected():
+                            self.connected = True
+                            self.logger.info(" IBKR Live Trading connection established successfully")
+                            break
+                    except Exception as e:
+                        self.logger.warning(f"Live Trading attempt {attempt+1} failed: {e}")
+                        if attempt < 2:  # Don't sleep after last attempt
+                            time.sleep(2)
+            
+            if not self.connected:
+                raise ConnectionError(" Failed to establish IBKR connection after retries. Please ensure TWS/IB Gateway is running.")
+        else:
+            self.logger.info("Simulation mode enabled - IBKR connection is not required for initialization.")
         
         try:
             # Load historical data
@@ -4070,13 +4147,15 @@ class QuantTradingEnginePlus:
                 self.connected = False
                 print(f" Reconnection error: {e}")
         
-        # Check IBKR connection status first
-        if not self.connected or not self.ib or not self.ib.isConnected():
-            error_msg = " IBKR connection required but not established. Cannot run daily cycle without direct connection."
-            self.logger.error(error_msg)
-            raise ConnectionError(error_msg)
-        
-        self.logger.info(" IBKR connection verified - proceeding with daily cycle")
+        # Check IBKR connection status first (skip when simulating)
+        if not self.simulation_mode:
+            if not self.connected or not self.ib or not self.ib.isConnected():
+                error_msg = " IBKR connection required but not established. Cannot run daily cycle without direct connection."
+                self.logger.error(error_msg)
+                raise ConnectionError(error_msg)
+            self.logger.info(" IBKR connection verified - proceeding with daily cycle")
+        else:
+            self.logger.info("Simulation mode - proceeding without IBKR connection.")
         
         cycle_results = {
             'success': False,
@@ -4534,7 +4613,7 @@ def main():
         config.symbols = args.symbols
     
     print("="*60)
-    print("🚀 Quant Trading Engine Plus")
+    print("Quant Trading Engine Plus")
     print("="*60)
     print(f"Mode: {args.mode.upper()}")
     print(f"Symbols: {config.symbols}")
