@@ -3,7 +3,7 @@
 Advanced quantitative trading framework integrating portfolio optimization, volatility modeling, machine learning, factor models, and automated execution. This project focuses on building an end-to-end trading system with reproducible analysis, risk management, and strategy evaluation.
 
 ## Portfolio Optimization
-### Multi_Asset_Portfolio_Optimization.py
+### Multi_Asset_Portfolio_Optimization
 -[Multi_Asset_Portfolio_Optimization.py](Multi_Asset_Portfolio_Optimization.py)    
 This module implements a multi-asset optimization framework that integrates mean-variance analysis, Sharpe-ratio maximization, and CVaR minimization. It generates efficient frontiers, visualizes portfolio weight dynamics under different risk levels, and supports rolling backtests with customizable constraints. All results including plots, CSV outputs, and Markdown reports—are automatically generated for transparent and reproducible portfolio analysis.    
 
