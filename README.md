@@ -1,4 +1,4 @@
-# Kexin-Quant-Trading-Advanced
+# quant-trading-advanced
 ## Overview
 Advanced quantitative trading framework integrating portfolio optimization, volatility modeling, machine learning, factor models, and automated execution. This project focuses on building an end-to-end trading system with reproducible analysis, risk management, and strategy evaluation.
 
